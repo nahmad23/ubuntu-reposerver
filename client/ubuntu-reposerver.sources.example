@@ -1,0 +1,13 @@
+# Example deb822 client source for the Ubuntu reposerver.
+# Place at /etc/apt/sources.list.d/ubuntu-reposerver.sources and adjust:
+#   - URIs stage segment: dev | test | prod
+#   - host: your reposerver hostname
+#   - Suites: match the client's release codename (noble / jammy)
+# Install the key first:
+#   sudo curl -fsSL http://reposerver.example.com/reposerver.gpg \
+#        -o /etc/apt/keyrings/ubuntu-reposerver.gpg
+Types: deb
+URIs: http://reposerver.example.com/prod
+Suites: noble noble-updates noble-security
+Components: main restricted universe multiverse
+Signed-By: /etc/apt/keyrings/ubuntu-reposerver.gpg

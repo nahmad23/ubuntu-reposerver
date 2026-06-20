@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# repoctl - single entry point for day-to-day reposerver operations.
+# Run as the aptly user, e.g.:  sudo -u aptly /opt/ubuntu-reposerver/bin/repoctl status
+source "$(cd "$(dirname "$0")/../scripts" && pwd)/lib.sh"
+
+cmd="${1:-help}"; shift || true
+
+status() {
+  echo "### Mirrors"
+  aptly mirror list 2>/dev/null || true
+  echo
+  echo "### Published endpoints (stage / suite -> snapshot)"
+  printf '%-8s %-20s %s\n' STAGE SUITE SNAPSHOT
+  for stage in "${STAGES[@]}"; do
+    while read -r suite _; do
+      printf '%-8s %-20s %s\n' "${stage}" "${suite}" "$(current_snapshot "${stage}" "${suite}" || echo '-')"
+    done < <(suites)
+  done
+  echo
+  echo "### Snapshot counts"
+  while read -r suite _; do
+    n="$(aptly snapshot list -raw 2>/dev/null | grep -cE "^${suite}-[0-9]" || true)"
+    printf '%-20s %s\n' "${suite}" "${n}"
+  done < <(suites)
+}
+
+case "${cmd}" in
+  init)      "${SCRIPT_DIR}/create-mirrors.sh" ;;
+  sync)      "${SCRIPT_DIR}/sync-mirrors.sh" ;;
+  snapshot)  "${SCRIPT_DIR}/snapshot.sh" ;;
+  daily)     "${SCRIPT_DIR}/daily-sync.sh" ;;
+  promote)   "${SCRIPT_DIR}/promote.sh" "$@" ;;
+  cleanup)   "${SCRIPT_DIR}/cleanup.sh" ;;
+  status)    status ;;
+  help|-h|--help)
+    cat <<EOF
+repoctl - Ubuntu reposerver control
+
+  init                 create aptly mirrors from config (idempotent)
+  sync                 update mirrors from upstream
+  snapshot             snapshot mirrors and publish to '${STAGES[0]}'
+  daily                full nightly pipeline (sync + snapshot + cleanup)
+  promote <from> <to> [suite]
+                       advance live snapshot between stages (${STAGES[*]})
+  cleanup              prune old snapshots, gc package pool
+  status               show mirrors, published stages, snapshot counts
+EOF
+    ;;
+  *) die "unknown command '${cmd}' (try: repoctl help)" ;;
+esac
