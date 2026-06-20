@@ -1,0 +1,21 @@
+[Unit]
+Description=Ubuntu reposerver - sync mirrors, snapshot, publish to dev
+Documentation=https://github.com/nahmad23/ubuntu-reposerver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=aptly
+Group=aptly
+# HOME is needed so aptly picks up ~/.aptly.conf; lib.sh also sets GNUPGHOME.
+Environment=HOME=/srv/aptly
+ExecStart=/opt/ubuntu-reposerver/scripts/daily-sync.sh
+# Mirror syncs can be long; do not let systemd kill them prematurely.
+TimeoutStartSec=0
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target
